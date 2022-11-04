@@ -20,6 +20,8 @@ void insert_pcb(struct Process_Control_Block pcb);
 
 void delete_pcb(struct priority_queue queue);
 
+void free_queue(struct priority_queue queue);
+
 struct Process_Control_Block get_min_pcb(struct priority_queue queue);
 
 // IMPLEMETATION
@@ -95,5 +97,9 @@ struct Process_Control_Block get_min_pcb(struct priority_queue queue)
     return queue.heap[0];
 }
 
+void free_queue(struct priority_queue queue)
+{
+    free(queue.heap);
+}
 
 #endif
