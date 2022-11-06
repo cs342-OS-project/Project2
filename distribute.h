@@ -38,8 +38,8 @@ int generate_process_length(char *distPL, int avgPL, int minPL, int maxPL)
 
         do
         {
-            int u = rand() % 2;
-            x = ((-1) * log(1 - (double) u)) / lambda;
+            double u = (double)rand() / (double)RAND_MAX;
+            x = ((-1) * log(1 - u)) / lambda;
         } while ( minPL > x || x > maxPL );
 
         return (int) x;
@@ -66,8 +66,8 @@ int generate_interarrival_time(char *distIAT, int avgIAT, int minIAT, int maxIAT
 
         do
         {
-            int u = rand() % 2;
-            x = ((-1) * log(1 - (double) u)) / lambda;
+            double u = (double)rand() / (double)RAND_MAX;
+            x = ((-1) * log(1 - u)) / lambda;
         } while ( minIAT > x || x > maxIAT );
 
         return (int) x;
