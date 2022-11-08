@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #include "distribute.h"
 #include "priority_queue.h"
@@ -16,10 +18,29 @@ struct priority_queue runqueue;
 pthread_mutex_t lock_runqueue;
 
 
-// Functions
+// Functions and definitions
 
 void *generator(void *args);
 void *scheduler(void *args);
+void *process(void *args);
+
+struct generator_params
+{
+    char *distPL, distIAT;
+    int avgPL, avgIAT;
+    int minPL, minIAT;
+    int maxPL, maxIAT;
+    int minPrio, maxPrio;
+    int allp;
+}
+
+struct process_params
+{
+    int process_length;
+    int priority;
+    int pid;
+    pthread_t tid;
+}
 
 int main(int argc, char const *argv[])
 {
@@ -84,7 +105,15 @@ int main(int argc, char const *argv[])
 
         pthread_t generator_tid, scheduler_tid;
 
-        pthread_create(&generator_tid, NULL, generator, NULL);
+        struct generator_params params;
+        params.distPL = distPL; params.distIAT = distIAT;
+        params.avgPL = avgPL; params.avgIAT = avgIAT;
+        params.minPL = minPL; params.minIAT = minIAT;
+        params.maxPL = maxPL; params.maxIAT = maxIAT;
+        params.minPrio = minPrio; params.maxPrio = maxPrio;
+        params.allp = allp;
+
+        pthread_create(&generator_tid, NULL, generator, (void *) params);
         pthread_create(&scheduler_tid, NULL, scheduler, NULL);
     }
 
@@ -92,6 +121,42 @@ int main(int argc, char const *argv[])
 }
 
 void *generator(void *args)
+{
+    struct generator_params params = (struct generator_params) args;
+    int numOfProcesses = params.allp;
+    int pid_counter = 1;
+
+    pthread_t *thread_id_array = malloc(sizeof(pthread_t) * numOfProcesses);
+
+    for (int i = 0; i < numOfProcesses; i++)
+    {
+        int process_length = generate_process_length(params.distPL, params.avgPL, params.minPL, params.maxPL);
+        int interarrival_time = generate_interarrival_time(params.distIAT, params.avgIAT, params.minIAT, params.maxIAT);
+        int priority = generate_priority(params.minPrio, params.maxPrio);
+
+        struct process_params p_params;
+        p_params.priority = priority;
+        p_params.process_length = process_length;
+        p_params.pid = pid_counter;
+
+        // Create thread
+        pthread_create(&thread_id_array[i], NULL, process, p_params);
+
+        usleep(interarrival_time * 1000);
+    }
+
+    for (int i = 0; i < numOfProcesses; i++)
+    {
+        pthread_join(thread_id_array[i], NULL);
+    }
+
+    free(thread_id_array);
+    pthread_exit(0);
+
+
+}
+
+void *process(void *args)
 {
 
 }
