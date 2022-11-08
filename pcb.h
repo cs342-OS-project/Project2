@@ -10,6 +10,7 @@ struct Process_Control_Block
     int pLength;
     int total_time_spent;
     pthread_cond_t cond_var;
+    pthread_t tid;
     int virtual_runtime;
 };
 
