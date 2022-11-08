@@ -26,11 +26,11 @@ struct Process_Control_Block get_min_pcb(struct priority_queue queue);
 
 // IMPLEMETATION
 
-void init_queue(struct priority_queue queue, int maxSize)
+void init_queue(struct priority_queue *queue, int maxSize)
 {
-    queue.currentSize = 0;
-    queue.maxSize = maxSize;
-    queue.heap = malloc(sizeof(struct Process_Control_Block) * maxSize);
+    queue->currentSize = 0;
+    queue->maxSize = maxSize;
+    queue->heap = malloc(sizeof(struct Process_Control_Block) * maxSize);
 }
 
 void heapRebuild(struct priority_queue queue, int root)

@@ -1,11 +1,25 @@
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "distribute.h"
+#include "priority_queue.h"
 
 #define MIN_ARGS_C 15
 #define MIN_ARGS_F 6
 #define MIN_ARGS 2
+
+// Global (Shared) Data
+
+struct priority_queue runqueue;
+
+pthread_mutex_t lock_runqueue;
+
+
+// Functions
+
+void *generator(void *args);
+void *scheduler(void *args);
 
 int main(int argc, char const *argv[])
 {
@@ -66,7 +80,23 @@ int main(int argc, char const *argv[])
         }
 
         // Continue execution
+        init_queue(&runqueue, allp);
+
+        pthread_t generator_tid, scheduler_tid;
+
+        pthread_create(&generator_tid, NULL, generator, NULL);
+        pthread_create(&scheduler_tid, NULL, scheduler, NULL);
     }
 
     return 0;
+}
+
+void *generator(void *args)
+{
+
+}
+
+void *scheduler(void *args)
+{
+    
 }
