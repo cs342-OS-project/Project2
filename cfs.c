@@ -39,7 +39,6 @@ struct process_params
     int process_length;
     int priority;
     int pid;
-    pthread_t tid;
 }
 
 int main(int argc, char const *argv[])
@@ -102,6 +101,7 @@ int main(int argc, char const *argv[])
 
         // Continue execution
         init_queue(&runqueue, allp);
+        pthread_mutex_init(&lock_runqueue, NULL);
 
         pthread_t generator_tid, scheduler_tid;
 
@@ -158,7 +158,29 @@ void *generator(void *args)
 
 void *process(void *args)
 {
+    struct process_params params = (struct process_params) args;
 
+    struct Process_Control_Block pcb;
+    pcb.pid = params.pid;
+    pcb.priority = pcb.priority;
+    pcb.pLength = params.process_length;
+
+    pcb.virtual_runtime = 0.0;
+    pcb.total_time_spent = 0; //?
+    pcb.state = WAITING;
+    pthread_cond_init(&(pcb.cond_var), NULL);
+
+    pthread_mutex_lock(&lock_runqueue);
+
+    // Critical Section
+    insert_pcb(&runqueue, pcb);
+
+    while (pcb.state == WAITING)
+    {
+        pthread_cond_wait(&pcb.cond_var, &lock_runqueue);
+    }
+    
+    pthread_mutex_unlock(&lock_runqueue);
 }
 
 void *scheduler(void *args)

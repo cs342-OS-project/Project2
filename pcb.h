@@ -3,14 +3,17 @@
 
 #include <pthread.h>
 
+#define WAITING 0
+#define RUNNING 1
+
 struct Process_Control_Block
 {
     int pid;
-    char *state;
+    int state;
     int pLength;
     int total_time_spent;
     pthread_cond_t cond_var;
-    int virtual_runtime;
+    double virtual_runtime;
     int priority;
 };
 
