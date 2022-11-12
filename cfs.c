@@ -17,6 +17,10 @@ struct priority_queue runqueue;
 
 pthread_mutex_t lock_runqueue;
 
+pthread_cond_t scheduler_cond_var;
+
+int scheduler_sleep = 0;
+
 
 // Functions and definitions
 
@@ -102,6 +106,7 @@ int main(int argc, char const *argv[])
         // Continue execution
         init_queue(&runqueue, allp);
         pthread_mutex_init(&lock_runqueue, NULL);
+        pthread_cond_init(&scheduler_cond_var, NULL);
 
         pthread_t generator_tid, scheduler_tid;
 
@@ -185,5 +190,12 @@ void *process(void *args)
 
 void *scheduler(void *args)
 {
-    
+    pthread_mutex_lock(&lock_runqueue);
+
+    while ( scheduler_sleep == 1)
+    {
+        pthread_cond_wait(&scheduler_cond_var, &lock_run_queue);
+    }
+
+    pthread_mutex_unlock(&lock_runqueue);
 }
