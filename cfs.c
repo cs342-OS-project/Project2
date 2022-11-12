@@ -194,7 +194,7 @@ void *scheduler(void *args)
 
     while ( scheduler_sleep == 1)
     {
-        pthread_cond_wait(&scheduler_cond_var, &lock_run_queue);
+        pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
     }
 
     pthread_mutex_unlock(&lock_runqueue);
