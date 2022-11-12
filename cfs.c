@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "distribute.h"
 #include "priority_queue.h"
@@ -41,6 +42,8 @@ struct generator_params
     int maxPL, maxIAT;
     int minPrio, maxPrio;
     int allp;
+    int mode;
+    char *infile;
 }
 
 struct process_params
@@ -135,6 +138,15 @@ int main(int argc, char const *argv[])
         params.minPrio = minPrio; params.maxPrio = maxPrio;
         params.allp = allp;
 
+        if (strcmp(prog_mode, "C"))
+            params.mode = 0;
+        else
+        {
+            params.mode = 1;
+            params.infile = infile;
+        }
+            
+
         pthread_create(&generator_tid, NULL, generator, (void *) params);
         pthread_create(&scheduler_tid, NULL, scheduler, NULL);
     }
@@ -146,15 +158,40 @@ void *generator(void *args)
 {
     struct generator_params params = (struct generator_params) args;
     int numOfProcesses = params.allp;
+    int mode = params.mode;
     int pid_counter = 1;
+
+    int process_length, interarrival_time, priority;
+    FILE *fp;
+
+    if (mode == 1)
+        fp = fopen(params.infile, "r");
 
     pthread_t *thread_id_array = malloc(sizeof(pthread_t) * numOfProcesses);
 
     for (int i = 0; i < numOfProcesses; i++)
     {
-        int process_length = generate_process_length(params.distPL, params.avgPL, params.minPL, params.maxPL);
-        int interarrival_time = generate_interarrival_time(params.distIAT, params.avgIAT, params.minIAT, params.maxIAT);
-        int priority = generate_priority(params.minPrio, params.maxPrio);
+        if (mode == 0)
+        {
+            process_length = generate_process_length(params.distPL, params.avgPL, params.minPL, params.maxPL);
+            interarrival_time = generate_interarrival_time(params.distIAT, params.avgIAT, params.minIAT, params.maxIAT);
+            priority = generate_priority(params.minPrio, params.maxPrio);
+        }
+        else
+        {
+            int value = 0;
+            char buffer[10];
+
+            fscanf(fp, "%s", buffer); // PL
+            fscanf(fp, "%d", &value);
+            process_length = value;
+            fscanf(fp, "%d", &value);
+            priority = value;
+            fscanf(fp, "%s", buffer); // IAT
+            fscanf(fp, "%d", &value);
+            interarrival_time = value;
+        }
+        
 
         struct process_params p_params;
         p_params.priority = priority;
