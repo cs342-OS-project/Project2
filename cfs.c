@@ -19,6 +19,10 @@ pthread_mutex_t lock_runqueue;
 
 pthread_cond_t scheduler_cond_var;
 
+pthread_cond_t *cond_var_array;
+
+int *states_array;
+
 int scheduler_sleep = 0;
 
 
@@ -108,6 +112,18 @@ int main(int argc, char const *argv[])
         pthread_mutex_init(&lock_runqueue, NULL);
         pthread_cond_init(&scheduler_cond_var, NULL);
 
+        cond_var_array = malloc(sizeof(pthread_cond_t) * allp);
+        for (int i = 0; i < allp; i++)
+        {
+            pthread_cond_init(&(cond_var_array[i]), NULL);
+        }
+
+        states_array = malloc(sizeof(int) * allp);
+        for (int i = 0; i < allp; i++)
+        {
+            states_array[i] = WAITING;
+        }
+
         pthread_t generator_tid, scheduler_tid;
 
         struct generator_params params;
@@ -172,18 +188,20 @@ void *process(void *args)
 
     pcb.virtual_runtime = 0.0;
     pcb.total_time_spent = 0; //?
-    pcb.state = WAITING;
-    pthread_cond_init(&(pcb.cond_var), NULL);
 
     pthread_mutex_lock(&lock_runqueue);
 
     // Critical Section
     insert_pcb(&runqueue, pcb);
 
-    while (pcb.state == WAITING)
+    while ( states_array[pcb.pid - 1] == WAITING )
     {
-        pthread_cond_wait(&pcb.cond_var, &lock_runqueue);
+        pthread_cond_signal(&scheduler_cond_var);
+        pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
     }
+
+    // Running
+    
     
     pthread_mutex_unlock(&lock_runqueue);
 }
@@ -192,9 +210,15 @@ void *scheduler(void *args)
 {
     pthread_mutex_lock(&lock_runqueue);
 
-    while ( scheduler_sleep == 1)
+    while ( scheduler_sleep == 0)
     {
         pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
+
+        // Sceduler Woken Up
+        struct Process_Control_Block pcb = get_min_pcb(&runqueue);
+        states_array[pcb.pid - 1] = RUNNING;
+        pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
+
     }
 
     pthread_mutex_unlock(&lock_runqueue);

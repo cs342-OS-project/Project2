@@ -9,10 +9,10 @@
 struct Process_Control_Block
 {
     int pid;
-    int state;
+    //int state;
     int pLength;
     int total_time_spent;
-    pthread_cond_t cond_var;
+    //pthread_cond_t cond_var;
     double virtual_runtime;
     int priority;
 };
