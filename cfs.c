@@ -6,6 +6,7 @@
 
 #include "distribute.h"
 #include "priority_queue.h"
+#include "scheduling.h"
 
 #define MIN_ARGS_C 15
 #define MIN_ARGS_F 6
@@ -198,12 +199,42 @@ void *process(void *args)
     {
         pthread_cond_signal(&scheduler_cond_var);
         pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
+
+        // Running
+        pthread_mutex_lock(&lock_runqueue);
+
+        int timeslice = calculate_timeslice(&runqueue, pcb.priority);
+
+        int actualruntime;
+
+        if (pcb.pLength < timeslice)
+        {
+            actualruntime = pcb.pLength;
+        }
+        else
+        {
+            actualruntime = timeslice;
+        }
+
+        usleep(actualruntime * 1000);
+        pcb.virtual_runtime = update_virtual_runtime(pcb.virtual_runtime, pcb.priority, actualruntime);
+        pcb.pLength -= actualruntime;
+
+        delete_pcb(&runqueue);
+
+        if (pcb.pLength > 0)
+        {
+            states_array[pcb.pid - 1] = WAITING;
+            insert_pcb(&runqueue, pcb);
+        }
+
+        pthread_mutex_unlock(&lock_runqueue);
     }
 
-    // Running
-    
-    
     pthread_mutex_unlock(&lock_runqueue);
+
+    
+
 }
 
 void *scheduler(void *args)

@@ -1,6 +1,8 @@
 #ifndef SCHEDULING
 #define SCHEDULING
 
+#include "priority_queue.h"
+
 // DECLARATIONS
 
 #define MIN_PRIO -20
@@ -22,11 +24,37 @@ static const int sched_latency = 100;
 
 int map_to_weight(int prio);
 
+int calculate_timeslice(struct priority_queue *queue, int priority);
+
+double update_virtual_runtime(double current_virtual_runtime, int priority, int actualruntime);
+
 // IMPLEMENTATION
 
 int map_to_weight(int prio)
 {
     return prio_to_weight[prio + MIN_PRIO * (-1)];
+}
+
+int calculate_timeslice(struct priority_queue *queue, int priority)
+{
+    int total_weight = 0;
+
+    for (int i = 0; i < queue->currentSize; i++)
+    {
+        total_weight += map_to_weight(queue->heap[i].priority);
+    }
+
+    int timeslice = (map_to_weight(priority) / total_weight) * sched_latency;
+
+    if (timeslice < min_granularity)
+        timeslice = min_granularity;
+
+    return timeslice;
+}
+
+double update_virtual_runtime(double current_virtual_runtime, int priority, int actualruntime)
+{
+    return current_virtual_runtime + (map_to_weight(0) / map_to_weight(priority)) * actualruntime;
 }
 
 #endif

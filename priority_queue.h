@@ -88,7 +88,7 @@ void delete_pcb(struct priority_queue *queue)
         return;
     }
 
-    queue->heap[0] = queue->heap[--queue.size];
+    queue->heap[0] = queue->heap[--queue.currenSize];
     heapRebuild(&queue, 0);
 }
 
