@@ -14,6 +14,7 @@
 #define MIN_ARGS_C 15
 #define MIN_ARGS_F 6
 #define MIN_ARGS 2
+#define STR_SIZE 20
 
 // Global (Shared) Data
 
@@ -42,14 +43,14 @@ void *process(void *args);
 
 struct generator_params
 {
-    char *distPL, *distIAT;
+    char distPL[STR_SIZE], distIAT[STR_SIZE];
     int avgPL, avgIAT;
     int minPL, minIAT;
     int maxPL, maxIAT;
     int minPrio, maxPrio;
     int allp;
     int mode;
-    char *infile;
+    char infile[STR_SIZE];
 };
 
 struct process_params
@@ -72,11 +73,11 @@ int main(int argc, char const *argv[])
     {
         int minPrio, maxPrio;
         int avgPL, minPL, maxPL;
-        char *distPL, *distIAT;
+        char distPL[STR_SIZE], distIAT[STR_SIZE];
         int avgIAT, minIAT, maxIAT;
         int rqLen, allp, outmode;
-        char *outfile = NULL;
-        char *infile = NULL;
+        char outfile[STR_SIZE];
+        char infile[STR_SIZE];
 
         char prog_mode[2];
         strcpy(prog_mode, argv[1]);
@@ -90,13 +91,14 @@ int main(int argc, char const *argv[])
             }
             // Take command line parameters
             minPrio = atoi(argv[2]); maxPrio = atoi(argv[3]);
-            distPL = argv[4]; avgPL = atoi(argv[5]); minPL = atoi(argv[6]); maxPL = atoi(argv[7]);
-            distIAT = argv[8]; avgIAT = atoi(argv[9]); minIAT = atoi(argv[10]); maxIAT = atoi(argv[11]);
+            //distPL = argv[4];
+            strcpy(distPL, argv[4]); avgPL = atoi(argv[5]); minPL = atoi(argv[6]); maxPL = atoi(argv[7]);
+            strcpy(distIAT, argv[8]); avgIAT = atoi(argv[9]); minIAT = atoi(argv[10]); maxIAT = atoi(argv[11]);
             rqLen = atoi(argv[12]); allp = atoi(argv[13]); outmode = atoi(argv[14]);
 
             if ( argc == MIN_ARGS_C + 1 )
             {
-                outfile = argv[15];
+                strcpy(outfile,argv[15]);
             }
 
         }
@@ -111,11 +113,11 @@ int main(int argc, char const *argv[])
             rqLen = atoi(argv[2]);
             allp = atoi(argv[3]);
             outmode = atoi(argv[4]);
-            infile = argv[5];
+            strcpy(infile, argv[5]);
 
             if ( argc == MIN_ARGS_F + 1 )
             {
-                outfile = argv[6];
+                strcpy(outfile, argv[6]);
             }
         }
 
@@ -145,7 +147,7 @@ int main(int argc, char const *argv[])
         pthread_t generator_tid, scheduler_tid;
 
         struct generator_params params;
-        params.distPL = distPL; params.distIAT = distIAT;
+        strcpy(params.distPL, distPL); strcpy(params.distIAT, distIAT);
         params.avgPL = avgPL; params.avgIAT = avgIAT;
         params.minPL = minPL; params.minIAT = minIAT;
         params.maxPL = maxPL; params.maxIAT = maxIAT;
@@ -157,7 +159,7 @@ int main(int argc, char const *argv[])
         else
         {
             params.mode = 1;
-            params.infile = infile;
+            strcpy(params.infile, infile);
         }
             
 
