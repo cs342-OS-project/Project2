@@ -170,6 +170,16 @@ int main(int argc, char const *argv[])
         
     }
 
+    printf("pid  arv dept  prio  cpu  waitr  turna  cs\n");
+
+    for(int i = 0; i < pcb_array_currentSize; i++)
+    {
+        struct Process_Control_Block tmp = pcb_array[i];
+        int turna = tmp.finish_time - tmp.arrival_time;
+        int waitr = turna - tmp.pLength;
+        printf("%d  %d %d  %d  %d  %d  %d  %d\n", tmp.pid, tmp.arrival_time, tmp.finish_time, tmp.priority, tmp.pLength, waitr, turna, tmp.context_switch);
+    }
+
     return 0;
 }
 
