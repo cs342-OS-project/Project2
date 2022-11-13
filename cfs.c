@@ -167,7 +167,7 @@ int main(int argc, char const *argv[])
         pthread_join(generator_tid, NULL);
         pthread_join(scheduler_tid, NULL);
 
-         printf("pid  arv dept  prio  cpu  waitr  turna  cs\n");
+        printf("pid  arv dept  prio  cpu  waitr  turna  cs\n");
         
         int sum = 0;
         for(int i = 0; i < pcb_array_currentSize; i++)
