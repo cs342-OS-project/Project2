@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#define STR_SIZE 20
 
 // Declarations
 int generate_priority(int minPrio, int maxPrio);
@@ -20,7 +21,7 @@ int generate_priority(int minPrio, int maxPrio)
     return num;
 }
 
-int generate_process_length(char *distPL, int avgPL, int minPL, int maxPL)
+int generate_process_length(char distPL[STR_SIZE], int avgPL, int minPL, int maxPL)
 {
     if ( strcmp(distPL, "fixed") == 0 )
     {
@@ -48,7 +49,7 @@ int generate_process_length(char *distPL, int avgPL, int minPL, int maxPL)
     return -1;
 }
 
-int generate_interarrival_time(char *distIAT, int avgIAT, int minIAT, int maxIAT)
+int generate_interarrival_time(char distIAT[STR_SIZE], int avgIAT, int minIAT, int maxIAT)
 {
     if ( strcmp(distIAT, "fixed") == 0 )
     {
