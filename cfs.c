@@ -27,9 +27,6 @@ pthread_cond_t *cond_var_array;
 
 int *states_array;
 
-int scheduler_sleep = 0;
-
-
 // Functions and definitions
 
 void *generator(void *args);
@@ -54,6 +51,8 @@ struct process_params
     int priority;
     int pid;
 }
+
+int isAllpFinished();
 
 int main(int argc, char const *argv[])
 {
@@ -282,24 +281,39 @@ void *process(void *args)
         pthread_mutex_unlock(&lock_runqueue);
 
         pthread_mutex_unlock(&lock_cpu);
-    }    
+    }
+
+    pthread_exit(0);    
 
 }
 
 void *scheduler(void *args)
 {
-    pthread_mutex_lock(&lock_runqueue);
-
-    while ( scheduler_sleep == 0)
+    while ( isAllpFinished() == 0 )
     {
         pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
 
         // Sceduler Woken Up
+        pthread_mutex_lock(&lock_runqueue);
+
         struct Process_Control_Block pcb = get_min_pcb(&runqueue);
         states_array[pcb.pid - 1] = RUNNING;
+
+        pthread_mutex_unlock(&lock_runqueue);
+
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
 
     }
+}
 
-    pthread_mutex_unlock(&lock_runqueue);
+int isAllpFinished()
+{
+    for (int i = 0; i < runqueue.currentSize; i++)
+    {
+        if ( states_array[i] != FINISHED )
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
