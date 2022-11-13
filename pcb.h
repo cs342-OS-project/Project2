@@ -5,6 +5,7 @@
 
 #define WAITING 0
 #define RUNNING 1
+#define FINISHED 2
 
 struct Process_Control_Block
 {

@@ -19,6 +19,8 @@ struct priority_queue runqueue;
 
 pthread_mutex_t lock_runqueue;
 
+pthread_mutex_t lock_cpu;
+
 pthread_cond_t scheduler_cond_var;
 
 pthread_cond_t *cond_var_array;
@@ -114,6 +116,7 @@ int main(int argc, char const *argv[])
         // Continue execution
         init_queue(&runqueue, allp);
         pthread_mutex_init(&lock_runqueue, NULL);
+        pthread_mutex_init(&lock_cpu, NULL);
         pthread_cond_init(&scheduler_cond_var, NULL);
 
         cond_var_array = malloc(sizeof(pthread_cond_t) * allp);
@@ -159,7 +162,6 @@ void *generator(void *args)
     struct generator_params params = (struct generator_params) args;
     int numOfProcesses = params.allp;
     int mode = params.mode;
-    int pid_counter = 1;
 
     int process_length, interarrival_time, priority;
     FILE *fp;
@@ -196,12 +198,16 @@ void *generator(void *args)
         struct process_params p_params;
         p_params.priority = priority;
         p_params.process_length = process_length;
-        p_params.pid = pid_counter;
+        p_params.pid = i + 1;
+
+        while ( isFull(&runqueue) )
+            usleep( interarrival_time * 1000 );
 
         // Create thread
         pthread_create(&thread_id_array[i], NULL, process, p_params);
 
         usleep(interarrival_time * 1000);
+
     }
 
     for (int i = 0; i < numOfProcesses; i++)
@@ -232,13 +238,15 @@ void *process(void *args)
     // Critical Section
     insert_pcb(&runqueue, pcb);
 
+    pthread_mutex_unlock(&lock_runqueue);
+
     while ( states_array[pcb.pid - 1] == WAITING )
     {
         pthread_cond_signal(&scheduler_cond_var);
         pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
 
         // Running
-        pthread_mutex_lock(&lock_runqueue);
+        pthread_mutex_lock(&lock_cpu);
 
         int timeslice = calculate_timeslice(&runqueue, pcb.priority);
 
@@ -257,6 +265,8 @@ void *process(void *args)
         pcb.virtual_runtime = update_virtual_runtime(pcb.virtual_runtime, pcb.priority, actualruntime);
         pcb.pLength -= actualruntime;
 
+        pthread_mutex_lock(&lock_runqueue);
+
         delete_pcb(&runqueue);
 
         if (pcb.pLength > 0)
@@ -264,13 +274,15 @@ void *process(void *args)
             states_array[pcb.pid - 1] = WAITING;
             insert_pcb(&runqueue, pcb);
         }
+        else
+        {
+            states_array[pcb.pid - 1] = FINISHED;
+        }
 
         pthread_mutex_unlock(&lock_runqueue);
-    }
 
-    pthread_mutex_unlock(&lock_runqueue);
-
-    
+        pthread_mutex_unlock(&lock_cpu);
+    }    
 
 }
 
