@@ -4,10 +4,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "distribute.h"
 #include "priority_queue.h"
 #include "scheduling.h"
+#include "pcb.h"
 
 #define MIN_ARGS_C 15
 #define MIN_ARGS_F 6
@@ -26,6 +28,11 @@ pthread_cond_t scheduler_cond_var;
 pthread_cond_t *cond_var_array;
 
 int *states_array;
+
+struct timeval start, arrival, finish;
+
+Process_Control_Block *pcb_array;
+int pcb_array_currentSize;
 
 // Functions and definitions
 
@@ -112,7 +119,9 @@ int main(int argc, char const *argv[])
             }
         }
 
-        // Continue execution
+        // Start Simulation
+        gettimeofday(&start, NULL);
+
         init_queue(&runqueue, allp);
         pthread_mutex_init(&lock_runqueue, NULL);
         pthread_mutex_init(&lock_cpu, NULL);
@@ -129,6 +138,9 @@ int main(int argc, char const *argv[])
         {
             states_array[i] = WAITING;
         }
+
+        pcb_array = malloc( sizeof(Procces_Control_Block) * allp);
+        pcb_array_currentSize = 0;
 
         pthread_t generator_tid, scheduler_tid;
 
@@ -151,6 +163,11 @@ int main(int argc, char const *argv[])
 
         pthread_create(&generator_tid, NULL, generator, (void *) params);
         pthread_create(&scheduler_tid, NULL, scheduler, NULL);
+
+        pthread_join(generator_tid, NULL);
+        pthread_join(scheduler_tid, NULL);
+
+        
     }
 
     return 0;
@@ -228,6 +245,8 @@ void *process(void *args)
     pcb.pid = params.pid;
     pcb.priority = pcb.priority;
     pcb.pLength = params.process_length;
+    pcb.remaining_pLength = params.process_length;
+    pcb.context_switch = 0;
 
     pcb.virtual_runtime = 0.0;
     pcb.total_time_spent = 0; //?
@@ -236,6 +255,9 @@ void *process(void *args)
 
     // Critical Section
     insert_pcb(&runqueue, pcb);
+
+    gettimeofday(&arrival, NULL);
+    pcb.arrival_time = (arrival.tv_usec - start.tv_usec) / 1000;
 
     pthread_mutex_unlock(&lock_runqueue);
 
@@ -251,9 +273,9 @@ void *process(void *args)
 
         int actualruntime;
 
-        if (pcb.pLength < timeslice)
+        if (pcb.remaining_pLength < timeslice)
         {
-            actualruntime = pcb.pLength;
+            actualruntime = pcb.emaining_pLength;
         }
         else
         {
@@ -262,7 +284,7 @@ void *process(void *args)
 
         usleep(actualruntime * 1000);
         pcb.virtual_runtime = update_virtual_runtime(pcb.virtual_runtime, pcb.priority, actualruntime);
-        pcb.pLength -= actualruntime;
+        pcb.remaining_pLength -= actualruntime;
 
         pthread_mutex_lock(&lock_runqueue);
 
@@ -271,11 +293,16 @@ void *process(void *args)
         if (pcb.pLength > 0)
         {
             states_array[pcb.pid - 1] = WAITING;
+            pcb.context_switch++;
             insert_pcb(&runqueue, pcb);
         }
         else
         {
             states_array[pcb.pid - 1] = FINISHED;
+            gettimeofday(&finish, NULL);
+            pcb_array[pcb_array_currentSize] = pcb;
+            pcb_array_currentSize++;
+            pcb.finish_time = (finish.tv_usec - start.tv_usec) / 1000; // dept
         }
 
         pthread_mutex_unlock(&lock_runqueue);

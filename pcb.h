@@ -10,12 +10,14 @@
 struct Process_Control_Block
 {
     int pid;
-    //int state;
     int pLength;
+    int remaining_pLength;
     int total_time_spent;
-    //pthread_cond_t cond_var;
     double virtual_runtime;
     int priority;
+    int arrival_time;
+    int finish_time;
+    int context_switch;
 };
 
 #endif
