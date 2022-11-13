@@ -16,6 +16,9 @@
 #define MIN_ARGS 2
 #define STR_SIZE 20
 
+#define SCHEDULER_WAITING 0
+#define SCHEDULER_RUNNING 1
+
 // Global (Shared) Data
 
 struct priority_queue runqueue;
@@ -34,6 +37,8 @@ struct timeval start, arrival, finish, running;
 
 struct Process_Control_Block *pcb_array;
 int pcb_array_currentSize;
+
+int scheduler_mode = SCHEDULER_WAITING;
 
 // Functions and definitions
 
@@ -288,9 +293,10 @@ void *process(void *args)
 
     // Critical Section
     insert_pcb(&runqueue, pcb);
-    
+
     pthread_mutex_unlock(&lock_runqueue);
 
+    scheduler_mode = SCHEDULER_RUNNING;
     pthread_cond_signal(&scheduler_cond_var);
 
     if ( outmode == 3 )
@@ -303,12 +309,13 @@ void *process(void *args)
 
     
 
-    while ( states_array[pcb.pid - 1] == WAITING )
-    {
-        pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
+    while ( pcb.remaining_pLength > 0 )
+    { 
+        while ( states_array[pcb.pid - 1] == WAITING )
+            pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
 
         // Running
-        pthread_mutex_lock(&lock_cpu);
+        //pthread_mutex_lock(&lock_cpu);
 
         if (outmode == 2)
         {
@@ -346,6 +353,8 @@ void *process(void *args)
 
         delete_pcb(&runqueue);
 
+       
+
         if (pcb.pLength > 0)
         {
             states_array[pcb.pid - 1] = WAITING;
@@ -365,9 +374,9 @@ void *process(void *args)
             pcb.finish_time = (finish.tv_usec - start.tv_usec) / 1000; // dept
         }
 
-        pthread_mutex_unlock(&lock_runqueue);
+        pthread_mutex_unlock(&lock_runqueue);  
 
-        pthread_mutex_unlock(&lock_cpu);
+        //pthread_mutex_unlock(&lock_cpu);
     }
 
     pthread_exit(0);    
@@ -382,7 +391,8 @@ void *scheduler(void *args)
     printf("%d", isAllpFinished(allp));
     while ( isAllpFinished(allp) == 0 )
     {
-        pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
+        while (scheduler_mode == WAITING )
+            pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
 
         // Scheduler Woken Up
         pthread_mutex_lock(&lock_runqueue);
@@ -399,7 +409,7 @@ void *scheduler(void *args)
             printf("Process with pid %d is selected for CPU\n", pcb.pid);
         }
 
-        
+        scheduler_mode = WAITING;
 
     }
 
