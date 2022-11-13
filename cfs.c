@@ -31,7 +31,7 @@ int *states_array;
 
 struct timeval start, arrival, finish;
 
-Process_Control_Block *pcb_array;
+struct Process_Control_Block *pcb_array;
 int pcb_array_currentSize;
 
 // Functions and definitions
@@ -139,7 +139,7 @@ int main(int argc, char const *argv[])
             states_array[i] = WAITING;
         }
 
-        pcb_array = malloc( sizeof(Procces_Control_Block) * allp);
+        pcb_array = malloc( sizeof(struct Procces_Control_Block) * allp);
         pcb_array_currentSize = 0;
 
         pthread_t generator_tid, scheduler_tid;
@@ -175,12 +175,12 @@ int main(int argc, char const *argv[])
             struct Process_Control_Block tmp = pcb_array[i];
             int turna = tmp.finish_time - tmp.arrival_time;
             int waitr = turna - tmp.pLength;
-            int sum = sum + waitr;
+            sum += waitr;
             printf("%d  %d %d  %d  %d  %d  %d  %d\n", tmp.pid, tmp.arrival_time, tmp.finish_time, tmp.priority, tmp.pLength, waitr, turna, tmp.context_switch);
         }
 
         double avg_wait = (double) sum / pcb_array_currentSize;
-         printf("avg waiting time : %f", avg_wait);
+        printf("avg waiting time : %f", avg_wait);
     }
 
     return 0;
