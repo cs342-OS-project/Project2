@@ -30,7 +30,7 @@ pthread_cond_t *cond_var_array;
 
 int *states_array;
 
-struct timeval start, arrival, finish;
+struct timeval start, arrival, finish, running;
 
 struct Process_Control_Block *pcb_array;
 int pcb_array_currentSize;
@@ -51,6 +51,7 @@ struct generator_params
     int allp;
     int mode;
     char infile[STR_SIZE];
+    int outmode;
 };
 
 struct process_params
@@ -58,6 +59,7 @@ struct process_params
     int process_length;
     int priority;
     int pid;
+    int outmode;
 };
 
 int isAllpFinished();
@@ -152,7 +154,7 @@ int main(int argc, char const *argv[])
         params.minPL = minPL; params.minIAT = minIAT;
         params.maxPL = maxPL; params.maxIAT = maxIAT;
         params.minPrio = minPrio; params.maxPrio = maxPrio;
-        params.allp = allp;
+        params.allp = allp; params.outmode = outmode;
 
         if (strcmp(prog_mode, "C"))
             params.mode = 0;
@@ -164,7 +166,7 @@ int main(int argc, char const *argv[])
             
 
         pthread_create(&generator_tid, NULL, generator, (void *) &params);
-        pthread_create(&scheduler_tid, NULL, scheduler, NULL);
+        pthread_create(&scheduler_tid, NULL, scheduler, (void*) &outmode);
 
         pthread_join(generator_tid, NULL);
         pthread_join(scheduler_tid, NULL);
@@ -193,6 +195,7 @@ void *generator(void *args)
     struct generator_params *params = (struct generator_params*) args;
     int numOfProcesses = params->allp;
     int mode = params->mode;
+    int outmode = params->outmode;
 
     int process_length, interarrival_time, priority;
     FILE *fp;
@@ -230,12 +233,18 @@ void *generator(void *args)
         p_params.priority = priority;
         p_params.process_length = process_length;
         p_params.pid = i + 1;
+        p_params.outmode = outmode;
 
         while ( isFull(&runqueue) )
             usleep( interarrival_time * 1000 );
 
         // Create thread
         pthread_create(&thread_id_array[i], NULL, process, (void *) &p_params);
+
+        if (outmode == 3)
+        {
+            printf("New Process with pid %d created", p_params.pid);
+        }
 
         usleep(interarrival_time * 1000);
 
@@ -266,10 +275,17 @@ void *process(void *args)
     pcb.virtual_runtime = 0.0;
     pcb.total_time_spent = 0; //?
 
+    int outmode = params->outmode;
+
     pthread_mutex_lock(&lock_runqueue);
 
     // Critical Section
     insert_pcb(&runqueue, pcb);
+
+    if ( outmode == 3 )
+    {
+        printf("The process with pid %d added to the runqueue\n", pcb.pid);
+    }
 
     gettimeofday(&arrival, NULL);
     pcb.arrival_time = (arrival.tv_usec - start.tv_usec) / 1000;
@@ -284,6 +300,17 @@ void *process(void *args)
         // Running
         pthread_mutex_lock(&lock_cpu);
 
+        if (outmode == 2)
+        {
+            gettimeofday(&running, NULL);
+            int time = (running.tv_usec - start.tv_usec) / 1000;
+            printf("%d %d RUNNING\n", time, pcb.pid);
+        }
+        else if (outmode == 3)
+        {
+            printf("Process with pid %d is running in CPU\n", pcb.pid);
+        }
+
         int timeslice = calculate_timeslice(&runqueue, pcb.priority);
 
         int actualruntime;
@@ -295,6 +322,10 @@ void *process(void *args)
         else
         {
             actualruntime = timeslice;
+            if (outmode == 3)
+            {
+                printf("Process with pid %d expired timeslice\n", pcb.pid);
+            }
         }
 
         usleep(actualruntime * 1000);
@@ -314,6 +345,10 @@ void *process(void *args)
         else
         {
             states_array[pcb.pid - 1] = FINISHED;
+            if (outmode == 3)
+            {
+                printf("Process with pid %d finished\n", pcb.pid);
+            }
             gettimeofday(&finish, NULL);
             pcb_array[pcb_array_currentSize] = pcb;
             pcb_array_currentSize++;
@@ -331,6 +366,7 @@ void *process(void *args)
 
 void *scheduler(void *args)
 {
+    int *outmode = (int *) args;
     while ( isAllpFinished() == 0 )
     {
         pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
@@ -342,6 +378,11 @@ void *scheduler(void *args)
         states_array[pcb.pid - 1] = RUNNING;
 
         pthread_mutex_unlock(&lock_runqueue);
+
+        if (*outmode == 3)
+        {
+            printf("Process with pid %d is selected for CPU\n", pcb.pid);
+        }
 
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
 
