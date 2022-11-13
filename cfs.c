@@ -98,6 +98,8 @@ int main(int argc, char const *argv[])
             strcpy(distIAT, argv[8]); avgIAT = atoi(argv[9]); minIAT = atoi(argv[10]); maxIAT = atoi(argv[11]);
             rqLen = atoi(argv[12]); allp = atoi(argv[13]); outmode = atoi(argv[14]);
 
+            printf("Test1\n");
+
             if ( argc == MIN_ARGS_C + 1 )
             {
                 strcpy(outfile,argv[15]);
@@ -123,6 +125,7 @@ int main(int argc, char const *argv[])
             }
         }
 
+        printf("Test2\n");
         // Start Simulation
         gettimeofday(&start, NULL);
 
@@ -164,7 +167,7 @@ int main(int argc, char const *argv[])
             strcpy(params.infile, infile);
         }
             
-
+        printf("Test3\n");
         pthread_create(&generator_tid, NULL, generator, (void *) &params);
         pthread_create(&scheduler_tid, NULL, scheduler, (void*) &outmode);
 
@@ -205,10 +208,13 @@ void *generator(void *args)
 
     pthread_t *thread_id_array = malloc(sizeof(pthread_t) * numOfProcesses);
 
+    printf("Test4\n");
     for (int i = 0; i < numOfProcesses; i++)
     {
         if (mode == 0)
         {
+            printf("Test5\n");
+            
             process_length = generate_process_length(params->distPL, params->avgPL, params->minPL, params->maxPL);
             interarrival_time = generate_interarrival_time(params->distIAT, params->avgIAT, params->minIAT, params->maxIAT);
             priority = generate_priority(params->minPrio, params->maxPrio);
@@ -238,6 +244,7 @@ void *generator(void *args)
         while ( isFull(&runqueue) )
             usleep( interarrival_time * 1000 );
 
+        
         // Create thread
         pthread_create(&thread_id_array[i], NULL, process, (void *) &p_params);
 
@@ -257,7 +264,6 @@ void *generator(void *args)
 
     free(thread_id_array);
     pthread_exit(0);
-
 
 }
 
