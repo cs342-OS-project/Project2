@@ -9,9 +9,9 @@
 // Declarations
 int generate_priority(int minPrio, int maxPrio);
 
-int generate_process_length(char *distPL, int avgPL, int minPL, int maxPL);
+int generate_process_length(char distPL[STR_SIZE], int avgPL, int minPL, int maxPL);
 
-int generate_interarrival_time(char *distIAT, int avgIAT, int minIAT, int maxIAT);
+int generate_interarrival_time(char distIAT[STR_SIZE], int avgIAT, int minIAT, int maxIAT);
 
 
 // Implementation

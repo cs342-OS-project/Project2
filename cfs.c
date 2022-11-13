@@ -61,8 +61,13 @@ struct process_params
     int pid;
     int outmode;
 };
+struct scheduler_params
+{
+    int outmode;
+    int allp;
+};
 
-int isAllpFinished();
+int isAllpFinished(int size);
 
 int main(int argc, char const *argv[])
 {
@@ -98,8 +103,6 @@ int main(int argc, char const *argv[])
             strcpy(distIAT, argv[8]); avgIAT = atoi(argv[9]); minIAT = atoi(argv[10]); maxIAT = atoi(argv[11]);
             rqLen = atoi(argv[12]); allp = atoi(argv[13]); outmode = atoi(argv[14]);
 
-            printf("Test1\n");
-
             if ( argc == MIN_ARGS_C + 1 )
             {
                 strcpy(outfile,argv[15]);
@@ -125,7 +128,6 @@ int main(int argc, char const *argv[])
             }
         }
 
-        printf("Test2\n");
         // Start Simulation
         gettimeofday(&start, NULL);
 
@@ -159,17 +161,20 @@ int main(int argc, char const *argv[])
         params.minPrio = minPrio; params.maxPrio = maxPrio;
         params.allp = allp; params.outmode = outmode;
 
-        if (strcmp(prog_mode, "C"))
+        if (strcmp(prog_mode, "C") == 0)
             params.mode = 0;
         else
         {
             params.mode = 1;
             strcpy(params.infile, infile);
         }
-            
-        printf("Test3\n");
+        
+        struct scheduler_params sParams;
+        sParams.allp = allp;
+        sParams.outmode = outmode;
+
         pthread_create(&generator_tid, NULL, generator, (void *) &params);
-        pthread_create(&scheduler_tid, NULL, scheduler, (void*) &outmode);
+        pthread_create(&scheduler_tid, NULL, scheduler, (void*) &sParams);
 
         pthread_join(generator_tid, NULL);
         pthread_join(scheduler_tid, NULL);
@@ -208,13 +213,10 @@ void *generator(void *args)
 
     pthread_t *thread_id_array = malloc(sizeof(pthread_t) * numOfProcesses);
 
-    printf("Test4\n");
     for (int i = 0; i < numOfProcesses; i++)
     {
         if (mode == 0)
         {
-            printf("Test5\n");
-            
             process_length = generate_process_length(params->distPL, params->avgPL, params->minPL, params->maxPL);
             interarrival_time = generate_interarrival_time(params->distIAT, params->avgIAT, params->minIAT, params->maxIAT);
             priority = generate_priority(params->minPrio, params->maxPrio);
@@ -233,7 +235,6 @@ void *generator(void *args)
             fscanf(fp, "%d", &value);
             interarrival_time = value;
         }
-        
 
         struct process_params p_params;
         p_params.priority = priority;
@@ -250,7 +251,7 @@ void *generator(void *args)
 
         if (outmode == 3)
         {
-            printf("New Process with pid %d created", p_params.pid);
+            printf("New Process with pid %d created\n", p_params.pid);
         }
 
         usleep(interarrival_time * 1000);
@@ -287,6 +288,10 @@ void *process(void *args)
 
     // Critical Section
     insert_pcb(&runqueue, pcb);
+    
+    pthread_mutex_unlock(&lock_runqueue);
+
+    pthread_cond_signal(&scheduler_cond_var);
 
     if ( outmode == 3 )
     {
@@ -296,11 +301,10 @@ void *process(void *args)
     gettimeofday(&arrival, NULL);
     pcb.arrival_time = (arrival.tv_usec - start.tv_usec) / 1000;
 
-    pthread_mutex_unlock(&lock_runqueue);
+    
 
     while ( states_array[pcb.pid - 1] == WAITING )
     {
-        pthread_cond_signal(&scheduler_cond_var);
         pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
 
         // Running
@@ -372,34 +376,39 @@ void *process(void *args)
 
 void *scheduler(void *args)
 {
-    int *outmode = (int *) args;
-    while ( isAllpFinished() == 0 )
+    struct scheduler_params *sParams = (struct scheduler_params *) args;
+    int outmode = sParams->outmode;
+    int allp = sParams->allp;
+    printf("%d", isAllpFinished(allp));
+    while ( isAllpFinished(allp) == 0 )
     {
         pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
 
-        // Sceduler Woken Up
+        // Scheduler Woken Up
         pthread_mutex_lock(&lock_runqueue);
-
+        printf("Entered\n");
         struct Process_Control_Block pcb = get_min_pcb(&runqueue);
         states_array[pcb.pid - 1] = RUNNING;
 
+        pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
+
         pthread_mutex_unlock(&lock_runqueue);
 
-        if (*outmode == 3)
+        if (outmode == 3)
         {
             printf("Process with pid %d is selected for CPU\n", pcb.pid);
         }
 
-        pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
+        
 
     }
 
     pthread_exit(0);
 }
 
-int isAllpFinished()
+int isAllpFinished(int size)
 {
-    for (int i = 0; i < runqueue.currentSize; i++)
+    for (int i = 0; i < size; i++)
     {
         if ( states_array[i] != FINISHED )
         {
