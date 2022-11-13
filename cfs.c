@@ -42,7 +42,7 @@ void *process(void *args);
 
 struct generator_params
 {
-    char *distPL, distIAT;
+    char *distPL, *distIAT;
     int avgPL, avgIAT;
     int minPL, minIAT;
     int maxPL, maxIAT;
@@ -122,7 +122,7 @@ int main(int argc, char const *argv[])
         // Start Simulation
         gettimeofday(&start, NULL);
 
-        init_queue(&runqueue, allp);
+        init_queue(&runqueue, rqLen);
         pthread_mutex_init(&lock_runqueue, NULL);
         pthread_mutex_init(&lock_cpu, NULL);
         pthread_cond_init(&scheduler_cond_var, NULL);
@@ -161,7 +161,7 @@ int main(int argc, char const *argv[])
         }
             
 
-        pthread_create(&generator_tid, NULL, generator, &params);
+        pthread_create(&generator_tid, NULL, generator, (void *) &params);
         pthread_create(&scheduler_tid, NULL, scheduler, NULL);
 
         pthread_join(generator_tid, NULL);
@@ -188,15 +188,15 @@ int main(int argc, char const *argv[])
 
 void *generator(void *args)
 {
-    struct generator_params params = (struct generator_params) args;
-    int numOfProcesses = params.allp;
-    int mode = params.mode;
+    struct generator_params *params = (struct generator_params*) args;
+    int numOfProcesses = params->allp;
+    int mode = params->mode;
 
     int process_length, interarrival_time, priority;
     FILE *fp;
 
     if (mode == 1)
-        fp = fopen(params.infile, "r");
+        fp = fopen(params->infile, "r");
 
     pthread_t *thread_id_array = malloc(sizeof(pthread_t) * numOfProcesses);
 
@@ -204,9 +204,9 @@ void *generator(void *args)
     {
         if (mode == 0)
         {
-            process_length = generate_process_length(params.distPL, params.avgPL, params.minPL, params.maxPL);
-            interarrival_time = generate_interarrival_time(params.distIAT, params.avgIAT, params.minIAT, params.maxIAT);
-            priority = generate_priority(params.minPrio, params.maxPrio);
+            process_length = generate_process_length(params->distPL, params->avgPL, params->minPL, params->maxPL);
+            interarrival_time = generate_interarrival_time(params->distIAT, params->avgIAT, params->minIAT, params->maxIAT);
+            priority = generate_priority(params->minPrio, params->maxPrio);
         }
         else
         {
@@ -233,7 +233,7 @@ void *generator(void *args)
             usleep( interarrival_time * 1000 );
 
         // Create thread
-        pthread_create(&thread_id_array[i], NULL, process, &p_params);
+        pthread_create(&thread_id_array[i], NULL, process, (void *) &p_params);
 
         usleep(interarrival_time * 1000);
 
@@ -252,13 +252,13 @@ void *generator(void *args)
 
 void *process(void *args)
 {
-    struct process_params params = (struct process_params) args;
+    struct process_params *params = (struct process_params*) args;
 
     struct Process_Control_Block pcb;
-    pcb.pid = params.pid;
-    pcb.priority = pcb.priority;
-    pcb.pLength = params.process_length;
-    pcb.remaining_pLength = params.process_length;
+    pcb.pid = params->pid;
+    pcb.priority = params->priority;
+    pcb.pLength = params->process_length;
+    pcb.remaining_pLength = params->process_length;
     pcb.context_switch = 0;
 
     pcb.virtual_runtime = 0.0;
@@ -344,6 +344,8 @@ void *scheduler(void *args)
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
 
     }
+
+    pthread_exit(0);
 }
 
 int isAllpFinished()

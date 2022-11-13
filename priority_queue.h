@@ -54,7 +54,7 @@ void heapRebuild(struct priority_queue *queue, int root)
             queue->heap[root] = queue->heap[child];
             queue->heap[child] = temp;
 
-            heapRebuild(&queue, child);
+            heapRebuild(queue, child);
         }
     }
 }
@@ -92,7 +92,7 @@ void delete_pcb(struct priority_queue *queue)
 
     queue->currentSize--;
     queue->heap[0] = queue->heap[queue->currentSize];
-    heapRebuild(&queue, 0);
+    heapRebuild(queue, 0);
 }
 
 struct Process_Control_Block get_min_pcb(struct priority_queue *queue)
