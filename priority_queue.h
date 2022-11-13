@@ -9,10 +9,10 @@ struct priority_queue
 {
     int currentSize;
     int maxSize;
-    Process_Control_Block *heap;
-}
+    struct Process_Control_Block *heap;
+};
 
-void init_queue(int maxSize);
+void init_queue(struct priority_queue *queue, int maxSize);
 
 void heapRebuild(struct priority_queue *queue, int root);
 
@@ -43,7 +43,7 @@ void heapRebuild(struct priority_queue *queue, int root)
     {
         int rightChild = child + 1;
 
-        if (rightChild < queue.size && queue->heap[rightChild].virtual_runtime < queue->heap[child].virtual_runtime)
+        if (rightChild < queue->currentSize && queue->heap[rightChild].virtual_runtime < queue->heap[child].virtual_runtime)
         {
             child = rightChild;
         }
@@ -66,9 +66,9 @@ void insert_pcb(struct priority_queue *queue, struct Process_Control_Block pcb)
         return;
     }
 
-    queue->heap[queue.currentSize] = pcb;
+    queue->heap[queue->currentSize] = pcb;
 
-    int place = queue.currentSize;
+    int place = queue->currentSize;
     int parent = (place - 1) / 2;
 
     while ( (place > 0) && (queue->heap[place].virtual_runtime < queue->heap[parent].virtual_runtime))
@@ -90,7 +90,8 @@ void delete_pcb(struct priority_queue *queue)
         return;
     }
 
-    queue->heap[0] = queue->heap[--queue.currenSize];
+    queue->currentSize--;
+    queue->heap[0] = queue->heap[queue->currentSize];
     heapRebuild(&queue, 0);
 }
 

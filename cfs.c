@@ -50,14 +50,14 @@ struct generator_params
     int allp;
     int mode;
     char *infile;
-}
+};
 
 struct process_params
 {
     int process_length;
     int priority;
     int pid;
-}
+};
 
 int isAllpFinished();
 
@@ -139,7 +139,7 @@ int main(int argc, char const *argv[])
             states_array[i] = WAITING;
         }
 
-        pcb_array = malloc( sizeof(struct Procces_Control_Block) * allp);
+        pcb_array = malloc(sizeof(struct Process_Control_Block) * allp);
         pcb_array_currentSize = 0;
 
         pthread_t generator_tid, scheduler_tid;
@@ -161,7 +161,7 @@ int main(int argc, char const *argv[])
         }
             
 
-        pthread_create(&generator_tid, NULL, generator, (void *) params);
+        pthread_create(&generator_tid, NULL, generator, &params);
         pthread_create(&scheduler_tid, NULL, scheduler, NULL);
 
         pthread_join(generator_tid, NULL);
@@ -233,7 +233,7 @@ void *generator(void *args)
             usleep( interarrival_time * 1000 );
 
         // Create thread
-        pthread_create(&thread_id_array[i], NULL, process, p_params);
+        pthread_create(&thread_id_array[i], NULL, process, &p_params);
 
         usleep(interarrival_time * 1000);
 
@@ -288,7 +288,7 @@ void *process(void *args)
 
         if (pcb.remaining_pLength < timeslice)
         {
-            actualruntime = pcb.emaining_pLength;
+            actualruntime = pcb.remaining_pLength;
         }
         else
         {
