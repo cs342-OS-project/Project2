@@ -22,6 +22,8 @@ void delete_pcb(struct priority_queue *queue);
 
 void free_queue(struct priority_queue *queue);
 
+int isFull();
+
 struct Process_Control_Block get_min_pcb(struct priority_queue *queue);
 
 // IMPLEMETATION
@@ -100,6 +102,14 @@ struct Process_Control_Block get_min_pcb(struct priority_queue *queue)
 void free_queue(struct priority_queue *queue)
 {
     free(queue->heap);
+}
+
+int isFull()
+{
+    if(queue->currentSize == queue->maxSize)
+        return 1;
+    else
+        return 0;
 }
 
 #endif
