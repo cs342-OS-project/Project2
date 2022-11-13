@@ -167,7 +167,20 @@ int main(int argc, char const *argv[])
         pthread_join(generator_tid, NULL);
         pthread_join(scheduler_tid, NULL);
 
+         printf("pid  arv dept  prio  cpu  waitr  turna  cs\n");
         
+        int sum = 0;
+        for(int i = 0; i < pcb_array_currentSize; i++)
+        {
+            struct Process_Control_Block tmp = pcb_array[i];
+            int turna = tmp.finish_time - tmp.arrival_time;
+            int waitr = turna - tmp.pLength;
+            int sum = sum + waitr;
+            printf("%d  %d %d  %d  %d  %d  %d  %d\n", tmp.pid, tmp.arrival_time, tmp.finish_time, tmp.priority, tmp.pLength, waitr, turna, tmp.context_switch);
+        }
+
+        double avg_wait = (double) sum / pcb_array_currentSize;
+         printf("avg waiting time : %f", avg_wait);
     }
 
     return 0;
