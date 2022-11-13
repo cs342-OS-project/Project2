@@ -289,12 +289,12 @@ void *process(void *args)
 
     int outmode = params->outmode;
 
-    pthread_mutex_lock(&lock_runqueue);
+    //pthread_mutex_lock(&lock_runqueue);
 
     // Critical Section
     insert_pcb(&runqueue, pcb);
 
-    pthread_mutex_unlock(&lock_runqueue);
+    //pthread_mutex_unlock(&lock_runqueue);
 
     scheduler_mode = SCHEDULER_RUNNING;
     pthread_cond_signal(&scheduler_cond_var);
@@ -395,14 +395,14 @@ void *scheduler(void *args)
             pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
 
         // Scheduler Woken Up
-        pthread_mutex_lock(&lock_runqueue);
+        //pthread_mutex_lock(&lock_runqueue);
         printf("Entered\n");
         struct Process_Control_Block pcb = get_min_pcb(&runqueue);
         states_array[pcb.pid - 1] = RUNNING;
 
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
 
-        pthread_mutex_unlock(&lock_runqueue);
+        //pthread_mutex_unlock(&lock_runqueue);
 
         if (outmode == 3)
         {
