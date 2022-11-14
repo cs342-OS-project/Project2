@@ -23,9 +23,9 @@
 
 struct priority_queue runqueue;
 
-pthread_mutex_t lock_runqueue;
+pthread_mutex_t lock1;
 
-pthread_mutex_t lock_cpu;
+pthread_mutex_t lock2;
 
 pthread_cond_t scheduler_cond_var;
 
@@ -137,8 +137,8 @@ int main(int argc, char const *argv[])
         gettimeofday(&start, NULL);
 
         init_queue(&runqueue, rqLen);
-        pthread_mutex_init(&lock_runqueue, NULL);
-        pthread_mutex_init(&lock_cpu, NULL);
+        pthread_mutex_init(&lock1, NULL);
+        pthread_mutex_init(&lock2, NULL);
         pthread_cond_init(&scheduler_cond_var, NULL);
 
         cond_var_array = malloc(sizeof(pthread_cond_t) * allp);
@@ -289,14 +289,12 @@ void *process(void *args)
 
     int outmode = params->outmode;
 
-    //pthread_mutex_lock(&lock_runqueue);
+    pthread_mutex_lock(&lock1);
 
     // Critical Section
     insert_pcb(&runqueue, pcb);
 
-    //pthread_mutex_unlock(&lock_runqueue);
-
-    
+    pthread_mutex_unlock(&lock1);
 
     if ( outmode == 3 )
     {
@@ -306,8 +304,6 @@ void *process(void *args)
     gettimeofday(&arrival, NULL);
     pcb.arrival_time = (arrival.tv_usec - start.tv_usec) / 1000;
 
-    
-
     while ( pcb.remaining_pLength > 0 )
     {
         printf("pid %d remaining %d\n", pcb.pid, pcb.remaining_pLength);
@@ -315,11 +311,10 @@ void *process(void *args)
         scheduler_mode = SCHEDULER_RUNNING;
         pthread_cond_signal(&scheduler_cond_var);
 
-        while ( states_array[pcb.pid - 1] == WAITING )
-            pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
+        pthread_mutex_lock(&lock2);
 
-        // Running
-        //pthread_mutex_lock(&lock_cpu);
+        while ( states_array[pcb.pid - 1] == WAITING )
+            pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock2);
 
         if (outmode == 2)
         {
@@ -353,10 +348,12 @@ void *process(void *args)
         pcb.virtual_runtime = update_virtual_runtime(pcb.virtual_runtime, pcb.priority, actualruntime);
         pcb.remaining_pLength -= actualruntime;
 
+        pthread_mutex_unlock(&lock2);
+
         if (pcb.remaining_pLength <= 0)
             break;
 
-        //pthread_mutex_lock(&lock_runqueue);
+        pthread_mutex_lock(&lock1);
 
         delete_pcb(&runqueue);
             
@@ -364,17 +361,19 @@ void *process(void *args)
         pcb.context_switch++;
         insert_pcb(&runqueue, pcb);
 
+         pthread_mutex_unlock(&lock1);
+
         scheduler_mode = SCHEDULER_RUNNING;
         pthread_cond_signal(&scheduler_cond_var);
-
-        //pthread_mutex_unlock(&lock_runqueue);
-
-        pthread_mutex_unlock(&lock_cpu);
     }
 
     printf("FINISH\n");
 
+    pthread_mutex_lock(&lock1);
+
     delete_pcb(&runqueue);
+
+    pthread_mutex_unlock(&lock1);
 
     states_array[pcb.pid - 1] = FINISHED;
     if (outmode == 3)
@@ -401,31 +400,33 @@ void *scheduler(void *args)
     printf("%d", isAllpFinished(allp));
     while ( isAllpFinished(allp) == 0 )
     {
-        while (scheduler_mode == WAITING ){
-            pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
+        pthread_mutex_lock(&lock2);
 
-        // Scheduler Woken Up
-        //pthread_mutex_lock(&lock_cpu);
+        while (scheduler_mode == SCHEDULER_WAITING )
+            pthread_cond_wait(&scheduler_cond_var, &lock2);
+
         printf("Entered\n");
         struct Process_Control_Block pcb = get_min_pcb(&runqueue);
+
         states_array[pcb.pid - 1] = RUNNING;
-
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
-
-        //pthread_mutex_unlock(&lock_cpu);
 
         if (outmode == 3)
         {
             printf("Process with pid %d is selected for CPU\n", pcb.pid);
         }
 
-        scheduler_mode = WAITING;
+        scheduler_mode = SCHEDULER_WAITING;
 
-        }
+        pthread_mutex_unlock(&lock2);
+
     }
 
     pthread_exit(0);
 }
+
+    
+
 
 int isAllpFinished(int size)
 {
