@@ -319,7 +319,7 @@ void *process(void *args)
             pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock_runqueue);
 
         // Running
-        pthread_mutex_lock(&lock_cpu);
+        //pthread_mutex_lock(&lock_cpu);
 
         if (outmode == 2)
         {
@@ -401,7 +401,7 @@ void *scheduler(void *args)
     printf("%d", isAllpFinished(allp));
     while ( isAllpFinished(allp) == 0 )
     {
-        while (scheduler_mode == WAITING )
+        while (scheduler_mode == WAITING ){
             pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
 
         // Scheduler Woken Up
@@ -421,6 +421,7 @@ void *scheduler(void *args)
 
         scheduler_mode = WAITING;
 
+        }
     }
 
     pthread_exit(0);
