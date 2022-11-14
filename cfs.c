@@ -308,12 +308,13 @@ void *process(void *args)
 
     while ( pcb.remaining_pLength > 0 )
     {
-        printf("pid %d remaining %d\n", pcb.pid, pcb.remaining_pLength);
 
         scheduler_mode = SCHEDULER_RUNNING;
         pthread_cond_signal(&scheduler_cond_var);
 
         pthread_mutex_lock(&lock2);
+
+        printf("pid %d remaining %d\n", pcb.pid, pcb.remaining_pLength);
 
         while ( states_array[pcb.pid - 1] == WAITING )
             pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock2);
@@ -361,7 +362,10 @@ void *process(void *args)
             
         states_array[pcb.pid - 1] = WAITING;
         pcb.context_switch++;
+
         insert_pcb(&runqueue, pcb);
+
+        printQueue(&runqueue);
 
         pthread_mutex_unlock(&lock1);
     }
@@ -374,7 +378,7 @@ void *process(void *args)
 
     pthread_mutex_unlock(&lock1);
 
-     printQueue(&runqueue);
+    // printQueue(&runqueue);
 
     states_array[pcb.pid - 1] = FINISHED;
     if (outmode == 3)
@@ -389,7 +393,7 @@ void *process(void *args)
     // scheduler_mode = SCHEDULER_RUNNING;
     // pthread_cond_signal(&scheduler_cond_var);
 
-    pthread_exit(0);    
+    pthread_mutex_unlock(&lock2);   
 
 }
 
@@ -398,9 +402,12 @@ void *scheduler(void *args)
     struct scheduler_params *sParams = (struct scheduler_params *) args;
     int outmode = sParams->outmode;
     int allp = sParams->allp;
-    printf("%d", isAllpFinished(allp));
+    //printf("%d\n", isAllpFinished(allp));
     while ( isAllpFinished(allp) == 0 )
     {
+        scheduler_mode = SCHEDULER_WAITING;
+
+        printf("%d\n", isAllpFinished(allp));
         pthread_mutex_lock(&lock2);
 
 
@@ -412,6 +419,7 @@ void *scheduler(void *args)
         pthread_mutex_lock(&lock1);
 
         struct Process_Control_Block pcb = get_min_pcb(&runqueue);
+
         pthread_mutex_unlock(&lock1);
 
         states_array[pcb.pid - 1] = RUNNING;
@@ -421,9 +429,6 @@ void *scheduler(void *args)
         {
             printf("Process with pid %d is selected for CPU\n", pcb.pid);
         }
-
-
-        scheduler_mode = SCHEDULER_WAITING;
 
         pthread_mutex_unlock(&lock2);
 
