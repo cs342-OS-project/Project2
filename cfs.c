@@ -405,14 +405,14 @@ void *scheduler(void *args)
             pthread_cond_wait(&scheduler_cond_var, &lock_runqueue);
 
         // Scheduler Woken Up
-        pthread_mutex_lock(&lock_cpu);
+        //pthread_mutex_lock(&lock_cpu);
         printf("Entered\n");
         struct Process_Control_Block pcb = get_min_pcb(&runqueue);
         states_array[pcb.pid - 1] = RUNNING;
 
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
 
-        pthread_mutex_unlock(&lock_cpu);
+        //pthread_mutex_unlock(&lock_cpu);
 
         if (outmode == 3)
         {
