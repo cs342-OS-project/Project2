@@ -26,6 +26,8 @@ int isFull(struct priority_queue *queue);
 
 struct Process_Control_Block get_min_pcb(struct priority_queue *queue);
 
+void printQueue(struct priority_queue *queue);
+
 // IMPLEMETATION
 
 void init_queue(struct priority_queue *queue, int maxSize)
@@ -111,6 +113,18 @@ int isFull(struct priority_queue *queue)
         return 1;
     else
         return 0;
+}
+
+void printQueue(struct priority_queue *queue)
+{
+    int size = queue->currentSize;
+    printf("RUNQUEUE: ");
+
+    for (int i = 0; i < size; i++)
+    {
+        printf("%d ", queue->heap[i].pid);
+    }
+    printf("\n");
 }
 
 #endif
