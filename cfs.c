@@ -314,7 +314,7 @@ void *process(void *args)
 
         pthread_mutex_lock(&lock2);
 
-        printf("pid %d remaining %d\n", pcb.pid, pcb.remaining_pLength);
+        printf("pid %d remaining %d virtual runtime %f\n", pcb.pid, pcb.remaining_pLength, pcb.virtual_runtime);
 
         while ( states_array[pcb.pid - 1] == WAITING )
             pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock2);
@@ -351,23 +351,27 @@ void *process(void *args)
         pcb.virtual_runtime = update_virtual_runtime(pcb.virtual_runtime, pcb.priority, actualruntime);
         pcb.remaining_pLength -= actualruntime;
 
-        pthread_mutex_unlock(&lock2);
+        
 
         if (pcb.remaining_pLength <= 0)
             break;
 
         pthread_mutex_lock(&lock1);
 
-        delete_pcb(&runqueue);
+        //delete_pcb(&runqueue);
             
         states_array[pcb.pid - 1] = WAITING;
         pcb.context_switch++;
 
-        insert_pcb(&runqueue, pcb);
+        //insert_pcb(&runqueue, pcb);
+
+        heapRebuild(&runqueue, 0);
 
         printQueue(&runqueue);
 
         pthread_mutex_unlock(&lock1);
+
+        pthread_mutex_unlock(&lock2);
     }
 
     printf("FINISH\n");

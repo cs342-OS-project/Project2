@@ -54,7 +54,7 @@ int calculate_timeslice(struct priority_queue *queue, int priority)
 
 double update_virtual_runtime(double current_virtual_runtime, int priority, int actualruntime)
 {
-    return current_virtual_runtime + (map_to_weight(0) / map_to_weight(priority)) * actualruntime;
+    return current_virtual_runtime + ( (double) map_to_weight(0) / map_to_weight(priority)) * actualruntime;
 }
 
 #endif
