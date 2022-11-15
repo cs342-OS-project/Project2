@@ -73,7 +73,7 @@ void insert_pcb(struct priority_queue *queue, struct Process_Control_Block pcb)
     int place = queue->currentSize;
     int parent = (place - 1) / 2;
 
-    while ( (place > 0) && (queue->heap[place].virtual_runtime < queue->heap[parent].virtual_runtime))
+    while ( (place > 0) && (queue->heap[place].virtual_runtime <= queue->heap[parent].virtual_runtime))
     {
         struct Process_Control_Block temp = queue->heap[parent];
         queue->heap[parent] = queue->heap[place];
