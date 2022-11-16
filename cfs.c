@@ -432,7 +432,8 @@ void *scheduler(void *args)
 
         pthread_mutex_lock(&lock2);
 
-        scheduler_mode = SCHEDULER_WAITING;
+        if (runqueue.currentSize == 0)
+            scheduler_mode = SCHEDULER_WAITING;
 
         while (scheduler_mode == SCHEDULER_WAITING )
             pthread_cond_wait(&scheduler_cond_var, &lock2);
@@ -455,8 +456,6 @@ void *scheduler(void *args)
         {
             printf("Process with pid %d is selected for CPU\n", pcb.pid);
         }
-
-        scheduler_mode = SCHEDULER_WAITING;
 
         pthread_mutex_unlock(&lock2);
     }
