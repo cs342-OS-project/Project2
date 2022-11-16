@@ -28,6 +28,8 @@ pthread_mutex_t lock1;
 
 pthread_mutex_t lock2;
 
+sem_t mutex;
+
 pthread_cond_t scheduler_cond_var;
 
 pthread_cond_t *cond_var_array;
@@ -144,6 +146,7 @@ int main(int argc, char const *argv[])
         init_queue(&runqueue, rqLen);
         pthread_mutex_init(&lock1, NULL);
         pthread_mutex_init(&lock2, NULL);
+        sem_init(&mutex, 0, 1);
         pthread_cond_init(&scheduler_cond_var, NULL);
 
         cond_var_array = malloc(sizeof(pthread_cond_t) * allp);
@@ -315,6 +318,8 @@ void *process(void *args)
     {
         pthread_mutex_lock(&lock2);
 
+        sem_wait(&mutex);
+
         scheduler_mode = SCHEDULER_RUNNING;
         pthread_cond_signal(&scheduler_cond_var);
 
@@ -377,7 +382,6 @@ void *process(void *args)
 
         heapRebuild(&runqueue, 0);
             
-       
         //insert_pcb(&runqueue, pcb);
 
         printQueue(&runqueue);
@@ -386,6 +390,11 @@ void *process(void *args)
 
         states_array[pcb.pid - 1] = WAITING;
         pcb.context_switch++;
+
+         scheduler_mode = SCHEDULER_RUNNING;
+        pthread_cond_signal(&scheduler_cond_var);
+
+        sem_post(&mutex);
 
         pthread_mutex_unlock(&lock2);
     }
@@ -458,10 +467,11 @@ void *scheduler(void *args)
         if (outmode == 3)
         {
             //printf("Process with pid %d is selected for CPU\n", pcb.pid);
-            //printf("Runquoue size %d\n", runqueue.currentSize);
         }
 
         pthread_mutex_unlock(&lock2);
+
+        sem_post(&mutex);
     }
 
     printf("Scheduler exit\n");
