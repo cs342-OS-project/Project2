@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
+#include <ctype.h>
 #include <semaphore.h>
 
 #include "distribute.h"
@@ -43,6 +44,10 @@ int pcb_array_currentSize;
 
 int scheduler_mode = SCHEDULER_WAITING;
 
+int checkOut = 0;
+
+FILE *fp2;
+
 // Functions and definitions
 
 void *generator(void *args);
@@ -76,10 +81,6 @@ struct scheduler_params
 };
 
 int isAllpFinished(int size);
-
-void printArray(int *arr, int size);
-
-void broadcast(pthread_cond_t *arr, int size);
 
 int main(int argc, char const *argv[])
 {
@@ -116,8 +117,10 @@ int main(int argc, char const *argv[])
             rqLen = atoi(argv[12]); allp = atoi(argv[13]); outmode = atoi(argv[14]);
 
             if ( argc == MIN_ARGS_C + 1 )
-            {
+            {   
+                checkOut = 1;
                 strcpy(outfile,argv[15]);
+                fp2 = fopen(outfile, "w");
             }
 
         }
@@ -136,7 +139,9 @@ int main(int argc, char const *argv[])
 
             if ( argc == MIN_ARGS_F + 1 )
             {
+                checkOut = 1;
                 strcpy(outfile, argv[6]);
+                fp2 = fopen(outfile, "w");
             }
         }
 
@@ -192,8 +197,11 @@ int main(int argc, char const *argv[])
         pthread_join(generator_tid, NULL);
         pthread_join(scheduler_tid, NULL);
 
-        printf("pid  arv dept  prio  cpu  waitr  turna  cs\n");
-        
+        if(checkOut == 1)
+            fprintf(fp2, "pid  arv dept  prio  cpu  waitr  turna  cs\n");
+        else
+            printf("pid  arv dept  prio  cpu  waitr  turna  cs\n");
+                
         int sum = 0;
         for(int i = 0; i < pcb_array_currentSize; i++)
         {
@@ -201,11 +209,18 @@ int main(int argc, char const *argv[])
             int turna = tmp.finish_time - tmp.arrival_time;
             int waitr = turna - tmp.pLength;
             sum += waitr;
-            printf("%d  %d %d  %d  %d  %d  %d  %d\n", tmp.pid, tmp.arrival_time, tmp.finish_time, tmp.priority, tmp.pLength, waitr, turna, tmp.context_switch);
+            if(checkOut == 1)
+                fprintf(fp2, "%d    %d %d  %d  %d  %d  %d  %d\n", tmp.pid, tmp.arrival_time, tmp.finish_time, tmp.priority, tmp.pLength, waitr, turna, tmp.context_switch);
+            else
+                printf("%d    %d %d  %d  %d  %d  %d  %d\n", tmp.pid, tmp.arrival_time, tmp.finish_time, tmp.priority, tmp.pLength, waitr, turna, tmp.context_switch);
         }
 
         double avg_wait = (double) sum / pcb_array_currentSize;
-        printf("avg waiting time : %f\n", avg_wait);
+        
+        if(checkOut == 1)
+            fprintf(fp2, "avg waiting time : %f\n", avg_wait);
+        else    
+            printf("avg waiting time : %f\n", avg_wait);
     }
 
     return 0;
@@ -257,14 +272,16 @@ void *generator(void *args)
 
         while ( isFull(&runqueue) )
             usleep( interarrival_time * 1000 );
-
         
         // Create thread
         pthread_create(&thread_id_array[i], NULL, process, (void *) &p_params);
 
         if (outmode == 3)
-        {
-            printf("New Process with pid %d created\n", p_params.pid);
+        {   
+            if(checkOut == 1)
+                fprintf(fp2, "New Process with pid %d created\n", p_params.pid);
+            else
+                printf("New Process with pid %d created\n", p_params.pid);
         }
 
         usleep(interarrival_time * 1000);
@@ -304,11 +321,12 @@ void *process(void *args)
 
     pthread_mutex_unlock(&lock1);
 
-    printQueue(&runqueue);
-
     if ( outmode == 3 )
     {
-        printf("The process with pid %d added to the runqueue\n", pcb.pid);
+        if(checkOut == 1)
+            fprintf(fp2, "The process with pid %d added to the runqueue\n", pcb.pid);
+        else
+            printf("The process with pid %d added to the runqueue\n", pcb.pid);
     }
 
     gettimeofday(&arrival, NULL);
@@ -328,17 +346,22 @@ void *process(void *args)
             pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock2);
         }
 
-        printf("pid %d remaining %d virtual runtime %f\n", pcb.pid, pcb.remaining_pLength, pcb.virtual_runtime);
+        if(checkOut == 1)
+            fprintf(fp2, "pid %d remaining %d virtual runtime %f\n", pcb.pid, pcb.remaining_pLength, pcb.virtual_runtime);
+        else
+            printf("pid %d remaining %d virtual runtime %f\n", pcb.pid, pcb.remaining_pLength, pcb.virtual_runtime);
         
         if (outmode == 2)
         {
             gettimeofday(&running, NULL);
             int time = (running.tv_usec - start.tv_usec) / 1000;
-            printf("%d %d RUNNING\n", time, pcb.pid);
         }
         else if (outmode == 3)
         {
-            printf("Process with pid %d is running in CPU\n", pcb.pid);
+            if(checkOut == 1)
+                fprintf(fp2, "Process with pid %d is running in CPU\n", pcb.pid);
+            else
+                printf("Process with pid %d is running in CPU\n", pcb.pid);
         }
 
         int timeslice = calculate_timeslice(&runqueue, pcb.priority);
@@ -354,7 +377,10 @@ void *process(void *args)
             actualruntime = timeslice;
             if (outmode == 3)
             {
-                printf("Process with pid %d expired timeslice\n", pcb.pid);
+                if(checkOut == 1)
+                    fprintf(fp2, "Process with pid %d expired timeslice\n", pcb.pid);
+                else
+                    printf("Process with pid %d expired timeslice\n", pcb.pid);
             }
         }
 
@@ -378,13 +404,7 @@ void *process(void *args)
             }
         }
 
-        //delete_pcb(&runqueue);
-
         heapRebuild(&runqueue, 0);
-            
-        //insert_pcb(&runqueue, pcb);
-
-        printQueue(&runqueue);
 
         pthread_mutex_unlock(&lock1);
 
@@ -399,21 +419,19 @@ void *process(void *args)
         pthread_mutex_unlock(&lock2);
     }
 
-    printf("FINISH\n");
-
     pthread_mutex_lock(&lock1);
 
     delete_pcb(&runqueue);
 
     pthread_mutex_unlock(&lock1);
 
-    // printQueue(&runqueue);
-
     states_array[pcb.pid - 1] = FINISHED;
     if (outmode == 3)
     {
-        printf("Process with pid %d finished\n", pcb.pid);
-        printQueue(&runqueue);
+        if(checkOut == 1)
+            fprintf(fp2, "Process with pid %d finished\n", pcb.pid);
+        else
+            printf("Process with pid %d finished\n", pcb.pid);
     }
     gettimeofday(&finish, NULL);
     pcb_array[pcb_array_currentSize] = pcb;
@@ -434,11 +452,9 @@ void *scheduler(void *args)
     struct scheduler_params *sParams = (struct scheduler_params *) args;
     int outmode = sParams->outmode;
     int allp = sParams->allp;
-    //printf("%d\n", isAllpFinished(allp));
+    
     while ( isAllpFinished(allp) == 0 )
     {
-        //printf("%d\n", isAllpFinished(allp));
-
         pthread_mutex_lock(&lock2);
 
         if (runqueue.currentSize == 0 )
@@ -450,8 +466,6 @@ void *scheduler(void *args)
         while (scheduler_mode == SCHEDULER_WAITING )
             pthread_cond_wait(&scheduler_cond_var, &lock2);
 
-       // printf("Entered\n");
-
         pthread_mutex_lock(&lock1);
 
         struct Process_Control_Block pcb = get_min_pcb(&runqueue);
@@ -460,13 +474,13 @@ void *scheduler(void *args)
 
         states_array[pcb.pid - 1] = RUNNING;
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
-        //broadcast(cond_var_array, allp);
-
-       //printArray(states_array, allp);
 
         if (outmode == 3)
         {
-            //printf("Process with pid %d is selected for CPU\n", pcb.pid);
+            if(checkOut == 1)
+                fprintf(fp2, "Process with pid %d is selected for CPU\n", pcb.pid);
+            else
+                printf("Process with pid %d is selected for CPU\n", pcb.pid);
         }
 
         pthread_mutex_unlock(&lock2);
@@ -474,7 +488,10 @@ void *scheduler(void *args)
         sem_post(&mutex);
     }
 
-    printf("Scheduler exit\n");
+    if(checkOut == 1)
+        fprintf(fp2, "Scheduler exit\n");
+    else
+        printf("Scheduler exit\n");
 
     pthread_exit(0);
 }
@@ -489,21 +506,4 @@ int isAllpFinished(int size)
         }
     }
     return 1;
-}
-
-void printArray(int *arr, int size)
-{
-    for (int i = 0; i < size; i++)
-    {
-        printf("%d:%d, ", i + 1, arr[i]);
-    }
-    printf("\n");
-}
-
-void broadcast(pthread_cond_t *arr, int size)
-{
-    for (int i = 0; i < size; i++)
-    {
-        pthread_cond_signal(&arr[i]);
-    }
 }
