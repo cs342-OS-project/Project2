@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
+#include <semaphore.h>
 
 #include "distribute.h"
 #include "priority_queue.h"
@@ -311,17 +312,19 @@ void *process(void *args)
     pcb.arrival_time = (arrival.tv_usec - start.tv_usec) / 1000;
 
     while ( pcb.remaining_pLength > 0 )
-    { 
+    {
         pthread_mutex_lock(&lock2);
 
         scheduler_mode = SCHEDULER_RUNNING;
         pthread_cond_signal(&scheduler_cond_var);
 
+        while ( states_array[pcb.pid - 1] != RUNNING )
+        {
+            pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock2);
+        }
+
         printf("pid %d remaining %d virtual runtime %f\n", pcb.pid, pcb.remaining_pLength, pcb.virtual_runtime);
         
-        while ( states_array[pcb.pid - 1] != RUNNING )
-            pthread_cond_wait(&(cond_var_array[pcb.pid - 1]), &lock2);
-
         if (outmode == 2)
         {
             gettimeofday(&running, NULL);
@@ -384,7 +387,6 @@ void *process(void *args)
         states_array[pcb.pid - 1] = WAITING;
         pcb.context_switch++;
 
-
         pthread_mutex_unlock(&lock2);
     }
 
@@ -409,8 +411,8 @@ void *process(void *args)
     pcb_array_currentSize++;
     pcb.finish_time = (finish.tv_usec - start.tv_usec) / 1000; // dept
 
-    // scheduler_mode = SCHEDULER_RUNNING;
-    // //pthread_cond_signal(&scheduler_cond_var);
+    scheduler_mode = SCHEDULER_RUNNING;
+    pthread_cond_signal(&scheduler_cond_var);
 
     pthread_mutex_unlock(&lock2);
 
@@ -426,11 +428,11 @@ void *scheduler(void *args)
     //printf("%d\n", isAllpFinished(allp));
     while ( isAllpFinished(allp) == 0 )
     {
-        scheduler_mode = SCHEDULER_WAITING;
-
         printf("%d\n", isAllpFinished(allp));
 
         pthread_mutex_lock(&lock2);
+
+        scheduler_mode = SCHEDULER_WAITING;
 
         while (scheduler_mode == SCHEDULER_WAITING )
             pthread_cond_wait(&scheduler_cond_var, &lock2);
@@ -454,8 +456,9 @@ void *scheduler(void *args)
             printf("Process with pid %d is selected for CPU\n", pcb.pid);
         }
 
-        pthread_mutex_unlock(&lock2);
+        scheduler_mode = SCHEDULER_WAITING;
 
+        pthread_mutex_unlock(&lock2);
     }
 
     printf("Scheduler exit\n");
