@@ -428,7 +428,7 @@ void *scheduler(void *args)
     //printf("%d\n", isAllpFinished(allp));
     while ( isAllpFinished(allp) == 0 )
     {
-        printf("%d\n", isAllpFinished(allp));
+        //printf("%d\n", isAllpFinished(allp));
 
         pthread_mutex_lock(&lock2);
 
@@ -441,7 +441,7 @@ void *scheduler(void *args)
         while (scheduler_mode == SCHEDULER_WAITING )
             pthread_cond_wait(&scheduler_cond_var, &lock2);
 
-        printf("Entered\n");
+       // printf("Entered\n");
 
         pthread_mutex_lock(&lock1);
 
@@ -453,11 +453,12 @@ void *scheduler(void *args)
         pthread_cond_signal(&(cond_var_array[pcb.pid - 1]));
         //broadcast(cond_var_array, allp);
 
-        printArray(states_array, allp);
+       //printArray(states_array, allp);
 
         if (outmode == 3)
         {
-            printf("Process with pid %d is selected for CPU\n", pcb.pid);
+            //printf("Process with pid %d is selected for CPU\n", pcb.pid);
+            //printf("Runquoue size %d\n", runqueue.currentSize);
         }
 
         pthread_mutex_unlock(&lock2);
