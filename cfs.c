@@ -202,7 +202,7 @@ int main(int argc, char const *argv[])
         }
 
         double avg_wait = (double) sum / pcb_array_currentSize;
-        printf("avg waiting time : %f", avg_wait);
+        printf("avg waiting time : %f\n", avg_wait);
     }
 
     return 0;
@@ -432,8 +432,11 @@ void *scheduler(void *args)
 
         pthread_mutex_lock(&lock2);
 
-        if (runqueue.currentSize == 0)
+        if (runqueue.currentSize == 0 )
             scheduler_mode = SCHEDULER_WAITING;
+
+        if (isAllpFinished(allp) == 1)
+            break;
 
         while (scheduler_mode == SCHEDULER_WAITING )
             pthread_cond_wait(&scheduler_cond_var, &lock2);
